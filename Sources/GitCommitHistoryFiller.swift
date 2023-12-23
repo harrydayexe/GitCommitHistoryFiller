@@ -10,6 +10,7 @@
 
 import Foundation
 import ArgumentParser
+import GitKit
 
 @available(macOS 12.0, *)
 @main
@@ -27,8 +28,23 @@ struct GitCommitHistoryFiller: AsyncParsableCommand {
     var verbose = false
     
     func run() async throws {
+        let git = Git(path: "./Output/")
+        try git.run(.cmd(.initialize))
+        let dateParser = DateFormatter()
+        dateParser.dateFormat = "dd/MM/yyyy"
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "E, d MMM yyyy HH:mm:ss Z"
+        
         for try await line in commitDataFile.lines {
-            print(line)
+            print("Processing line: \(line)")
+            let tokens = line.components(separatedBy: ",")
+            let date = dateParser.date(from: tokens[0])!
+            if let numOfCommits = Int(tokens[1]) {
+                for i in 0..<numOfCommits {
+                    try git.run(.raw("commit --allow-empty --date='\(dateFormatter.string(from: date))' -m 'Commit number \(i+1) on \(tokens[0])'"))
+                }
+            }
         }
     }
 }
