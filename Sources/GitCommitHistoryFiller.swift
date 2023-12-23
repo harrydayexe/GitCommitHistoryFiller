@@ -12,7 +12,7 @@ import Foundation
 import ArgumentParser
 import GitKit
 
-@available(macOS 12.0, *)
+@available(macOS 13.0, *)
 @main
 struct GitCommitHistoryFiller: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
@@ -24,11 +24,21 @@ struct GitCommitHistoryFiller: AsyncParsableCommand {
         completion: .file(), transform: URL.init(fileURLWithPath:))
     var commitDataFile: URL
     
+    @Argument(
+        help: "The folder to create the Git repo in. If omitted, a new folder ./Output/ is created",
+        completion: .file(), transform: URL.init(fileURLWithPath:))
+    var outputLocation: URL? = nil
+    
     @Flag(name: .shortAndLong, help: "Include extra information in the output.")
     var verbose = false
     
     func run() async throws {
-        let git = Git(path: "./Output/")
+        let git: Git
+        if let urlString = outputLocation?.absoluteFilePathString {
+            git = Git(path: urlString)
+        } else {
+            git = Git(path: "./Output/")
+        }
         try git.run(.cmd(.initialize))
         let dateParser = DateFormatter()
         dateParser.dateFormat = "dd/MM/yyyy"
@@ -46,5 +56,11 @@ struct GitCommitHistoryFiller: AsyncParsableCommand {
                 }
             }
         }
+    }
+}
+
+extension URL {
+    var absoluteFilePathString: String {
+        return absoluteString.replacingOccurrences(of: "\((scheme)!)://", with: "")
     }
 }
